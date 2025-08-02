@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Client Credentials
+model Client {
+  id          Int      @id @default(autoincrement())
+  clientId    String   @unique @map("client_id")
+  clientSecret String  @map("client_secret")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tokens   Token[]
+  apiLogs  ApiLog[]
+
+  @@map("clients")
+}
+
+// Tokens พร้อม Domain Info (Admin กำหนด)
+model Token {
+  id          Int      @id @default(autoincrement())
+  clientId    String   @map("client_id")
+  tokenHash   String   @unique @map("token_hash")
+  targetDomain String  @map("target_domain")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [clientId])
+
+  @@map("tokens")
+}
+
+// API Logs
+model ApiLog {
+  id          Int      @id @default(autoincrement())
+  clientId    String   @map("client_id")
+  targetDomain String  @map("target_domain")
+  endpoint    String
+  method      String
+  requestData Json?    @map("request_data")
+  responseData Json?   @map("response_data")
+  statusCode  Int?     @map("status_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [clientId])
+
+  @@map("api_logs")
+} 
