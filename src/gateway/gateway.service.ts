@@ -1,33 +1,454 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import axios from 'axios';
 import { prisma } from '../lib/prisma';
 
 @Injectable()
 export class GatewayService {
-  async getAll(token: string) {
-    // 1. ตรวจสอบ token และดึงข้อมูล
-    const tokenRecord = await prisma.token.findFirst({
-      where: {
-        tokenHash: token,
-        isActive: true,
-      },
-    });
+  // Existing methods
+  async getAll() {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
 
-    if (!tokenRecord) {
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.get(
+        `${tokenRecord.targetDomain}/api/member/list`,
+      );
+
       return {
-        error: 'Invalid token',
-        statusCode: 401,
-      };
-    }
-
-    // 2. แสดงข้อมูลจาก token
-    return {
-      message: 'Get all members - Token info',
-      tokenInfo: {
-        clientId: tokenRecord.clientId,
-        targetDomain: tokenRecord.targetDomain,
+        success: true,
+        data: response.data,
         prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to fetch members from backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getById(id: string) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.get(
+        `${tokenRecord.targetDomain}/api/member/list`,
+      );
+      const members = response.data.data.members;
+      const member = members.find((m) => m.id === id);
+
+      if (!member) {
+        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+      }
+
+      return {
+        success: true,
+        data: { member },
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to fetch member by ID from backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getByPhone(phone: string) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.get(
+        `${tokenRecord.targetDomain}/api/member/list`,
+      );
+      const members = response.data.data.members;
+      const member = members.find((m) => m.username === phone);
+
+      if (!member) {
+        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+      }
+
+      return {
+        success: true,
+        data: { member },
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to fetch member by phone from backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getBalance(id: string) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.get(
+        `${tokenRecord.targetDomain}/api/member/list`,
+      );
+      const members = response.data.data.members;
+      const member = members.find((m) => m.id === id);
+
+      if (!member) {
+        throw new HttpException('Member not found', HttpStatus.NOT_FOUND);
+      }
+
+      return {
+        success: true,
+        data: {
+          memberId: id,
+          balance: parseFloat(member.creditBalance || '0'),
+          member,
+        },
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to fetch member balance from backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // New methods for CRUD operations
+  async createMember(createMemberDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/create-member`,
+        createMemberDto,
+      );
+
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to create member in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateMember(id: string, updateMemberDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.put(
+        `${tokenRecord.targetDomain}/api/member/${id}`,
+        updateMemberDto,
+      );
+
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to update member in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteMember(id: string) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.delete(
+        `${tokenRecord.targetDomain}/api/member/${id}`,
+      );
+
+      return {
+        success: true,
+        data: { success: true },
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to delete member in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // Bank and data APIs
+  async getLaoBanks() {
+    const banks = [
+      { value: 'BCEL', label: 'BCEL BANK (BCEL)' },
+      { value: 'JDB', label: 'JOINT DEVELOPMENT BANK (JDB)' },
+      { value: 'LDB', label: 'LAO DEVELOPMENT BANK (LDB)' },
+      { value: 'LVB', label: 'LAOS-VIETNAM BANK (LVB)' },
+      { value: 'ACLB', label: 'ACLEDA BANK LAO (ACLB)' },
+      { value: 'APB', label: 'AGRICULTURAL PROMOTION BANK (APB)' },
+      { value: 'BIC', label: 'BIC Bank Lao Co. Ltd. (BIC)' },
+      { value: 'BOC', label: 'Bank of China (Hong Kong) Ltd (BOC)' },
+      {
+        value: 'ICBC',
+        label: 'Industrial and Commercial Bank of China Ltd (ICBC)',
       },
+      { value: 'IDCB', label: 'INDOCHINA BANK LTD (IDCB)' },
+      { value: 'KTB', label: 'KASIKORNTHAI Bank Sole Ltd. (KTB)' },
+      { value: 'MRB', label: 'MARUHAN Japan Bank Lao Co., Ltd (MRB)' },
+      { value: 'MBB', label: 'Military Commercial Joint Stock Ban (MBB)' },
+      { value: 'PBB', label: 'Public Bank Lao Ltd. (PBB)' },
+      { value: 'SCB', label: 'SACOMBANK LAO (SCB)' },
+      { value: 'STB', label: 'ST Bank Ltd. (STB)' },
+      { value: 'VTB', label: 'Vietinbank Lao Ltd. (VTB)' },
+      { value: 'BFL', label: 'Banque Franco-Lao Ltd. (BFL)' },
+      { value: 'PSV', label: 'PHONGSAVANH BANK LTD (PSV)' },
+    ];
+
+    return {
+      success: true,
+      data: banks,
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  async getCurrencies() {
+    const currencies = [
+      { value: 'LAK', label: 'LAK' },
+      { value: 'THB', label: 'THB' },
+    ];
+
+    return {
+      success: true,
+      data: currencies,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async getCustomerGroups() {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.get(
+        `${tokenRecord.targetDomain}/api/bank/bcel/get-bank`,
+      );
+
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to fetch customer groups from backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // Verification APIs
+  async checkAccount(checkAccountDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/check-account-name`,
+        checkAccountDto,
+      );
+
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to check account in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async verifyBankAccount(verifyBankAccountDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/check-account-name`,
+        verifyBankAccountDto,
+      );
+
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          error: 'Failed to verify bank account in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  // Health Check
+  async healthCheck() {
+    return {
+      success: true,
+      data: {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        service: 'bank-adapter',
+      },
     };
   }
 }
