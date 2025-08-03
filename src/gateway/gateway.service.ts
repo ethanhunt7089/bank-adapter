@@ -312,6 +312,197 @@ export class GatewayService {
     }
   }
 
+  // Credit Management Methods
+  async addCredit(id: string, addCreditDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/add-remove-credit-member`,
+        {
+          phone: addCreditDto.phone,
+          amount: addCreditDto.amount,
+          creditType: 'ADD_CREDIT',
+          remarks: addCreditDto.remarks || 'Add credit via Bank Adapter',
+        },
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          error: 'Failed to add credit in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async removeCredit(id: string, removeCreditDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/remove-credit-member`,
+        {
+          id: id,
+          amount: removeCreditDto.amount,
+          remarks: removeCreditDto.remarks || 'Remove credit via Bank Adapter',
+        },
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          error: 'Failed to remove credit in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async cashoutCredit(id: string, cashoutCreditDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/member/cashout-credit-member`,
+        {
+          id: id,
+          remarks:
+            cashoutCreditDto.remarks || 'Cashout credit via Bank Adapter',
+        },
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          error: 'Failed to cashout credit in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deposit(depositDto: any) {
+    try {
+      const tokenRecord = await prisma.token.findFirst({
+        where: { isActive: true },
+      });
+      if (!tokenRecord) {
+        throw new HttpException(
+          'No active token found',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      const response = await axios.post(
+        `${tokenRecord.targetDomain}/api/dashboard/deposit`,
+        {
+          Id: depositDto.id || '',
+          Phone: depositDto.phone,
+          MoneyDeposit: depositDto.amount,
+          Currency: depositDto.currency,
+          BankName: depositDto.bankName,
+          DateDeposit: depositDto.dateDeposit,
+          TimeDeposit: depositDto.timeDeposit,
+          ActualDateTime: depositDto.actualDateTime,
+        },
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      return {
+        success: true,
+        data: response.data,
+        prefix: tokenRecord.prefix,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      throw new HttpException(
+        {
+          error: 'Failed to deposit in backoffice',
+          statusCode: 500,
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   // Bank and data APIs
   async getLaoBanks() {
     const banks = [

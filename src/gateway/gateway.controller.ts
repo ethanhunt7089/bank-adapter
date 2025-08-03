@@ -84,4 +84,25 @@ export class GatewayController {
   async healthCheck() {
     return this.gatewayService.healthCheck();
   }
+
+  // Credit Management APIs
+  @Post('/api/member/:id/add-credit')
+  async addCredit(@Param('id') id: string, @Body() addCreditDto: any) {
+    return this.gatewayService.addCredit(id, addCreditDto);
+  }
+
+  @Post('/api/member/:id/remove-credit')
+  async removeCredit(@Param('id') id: string, @Body() removeCreditDto: any) {
+    return this.gatewayService.removeCredit(id, removeCreditDto);
+  }
+
+  @Post('/api/member/:id/cashout-credit')
+  async cashoutCredit(@Param('id') id: string, @Body() cashoutCreditDto: any) {
+    return this.gatewayService.cashoutCredit(id, cashoutCreditDto);
+  }
+
+  @Post('/api/member/deposit')
+  async deposit(@Body() depositDto: any) {
+    return this.gatewayService.deposit(depositDto);
+  }
 }
