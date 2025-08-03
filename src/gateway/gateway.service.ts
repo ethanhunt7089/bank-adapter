@@ -4,6 +4,27 @@ import { prisma } from '../lib/prisma';
 
 @Injectable()
 export class GatewayService {
+  // Helper function to get JWT token from backoffice
+  private async getJwtToken(targetDomain: string): Promise<string> {
+    try {
+      const loginResponse = await axios.post(
+        `${targetDomain}/api/auth/signin`,
+        {
+          username: 'admin',
+          password: 'Admin123',
+        },
+      );
+
+      if (loginResponse.data && loginResponse.data.data) {
+        return loginResponse.data.data;
+      }
+      return '';
+    } catch (error) {
+      console.error('Failed to get JWT token:', error);
+      return '';
+    }
+  }
+
   // Existing methods
   async getAll() {
     try {
@@ -185,9 +206,18 @@ export class GatewayService {
         );
       }
 
+      // Get JWT token using helper function
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/create-member`,
         createMemberDto,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       return {
@@ -342,8 +372,17 @@ export class GatewayService {
         );
       }
 
+      // Get JWT token using helper function
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
       const response = await axios.get(
         `${tokenRecord.targetDomain}/api/bank/bcel/get-bank`,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       return {
@@ -379,9 +418,18 @@ export class GatewayService {
         );
       }
 
+      // Get JWT token using helper function
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/check-account-name`,
         checkAccountDto,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       return {
@@ -416,9 +464,18 @@ export class GatewayService {
         );
       }
 
+      // Get JWT token using helper function
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/check-account-name`,
         verifyBankAccountDto,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        },
       );
 
       return {
