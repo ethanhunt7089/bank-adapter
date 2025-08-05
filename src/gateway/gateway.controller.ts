@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,8 +19,12 @@ export class GatewayController {
 
   // Member APIs
   @Get('member/list')
-  async getAllMembers() {
-    return this.gatewayService.getAll();
+  async getAllMembers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.gatewayService.getAll({ page, limit, search });
   }
 
   @Get('member/:id')

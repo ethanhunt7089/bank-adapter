@@ -43,7 +43,7 @@ export class GatewayService {
   }
 
   // Existing methods
-  async getAll() {
+  async getAll(params?: { page?: string; limit?: string; search?: string }) {
     try {
       const tokenRecord = await prisma.token.findFirst({
         where: { isActive: true },
@@ -59,9 +59,15 @@ export class GatewayService {
       // เรียก JWT token
       const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
 
-      // ส่ง request พร้อม JWT token
+      // สร้าง query parameters
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page);
+      if (params?.limit) queryParams.append('limit', params.limit);
+      if (params?.search) queryParams.append('search', params.search);
+
+      // ส่ง request พร้อม JWT token และ query parameters
       const response = await axios.get(
-        `${tokenRecord.targetDomain}/api/member/list`,
+        `${tokenRecord.targetDomain}/api/member/list?${queryParams.toString()}`,
         {
           headers: {
             Cookie: `token=${jwtToken}`,
