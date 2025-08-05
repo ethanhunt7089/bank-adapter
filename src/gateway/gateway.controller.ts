@@ -108,6 +108,10 @@ export class GatewayController {
 
   @Post('/api/member/deposit')
   async deposit(@Body() depositDto: any) {
+    console.log(
+      '🔍 [BANK-ADAPTER] Controller received depositDto:',
+      depositDto,
+    );
     return this.gatewayService.deposit(depositDto);
   }
 }

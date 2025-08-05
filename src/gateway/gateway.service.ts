@@ -538,11 +538,16 @@ export class GatewayService {
   }
 
   async deposit(depositDto: any) {
+    console.log('🔍 [BANK-ADAPTER] deposit called with:', depositDto);
+
     try {
       const tokenRecord = await prisma.token.findFirst({
         where: { isActive: true },
       });
+      console.log('🔍 [BANK-ADAPTER] Token record:', tokenRecord);
+
       if (!tokenRecord) {
+        console.error('❌ [BANK-ADAPTER] No active token found');
         throw new HttpException(
           'No active token found',
           HttpStatus.UNAUTHORIZED,
@@ -550,18 +555,31 @@ export class GatewayService {
       }
 
       const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      console.log(
+        '🔍 [BANK-ADAPTER] JWT token received:',
+        jwtToken ? 'Yes' : 'No',
+      );
+
+      const payload = {
+        Id: depositDto.Id || '',
+        Phone: depositDto.Phone, // ✅ phone = username ในระบบ
+        MoneyDeposit: parseFloat(depositDto.MoneyDeposit),
+        Currency: depositDto.Currency,
+        BankName: depositDto.BankName,
+        DateDeposit: depositDto.DateDeposit,
+        TimeDeposit: depositDto.TimeDeposit,
+        ActualDateTime: depositDto.ActualDateTime,
+      };
+
+      console.log('🔍 [BANK-ADAPTER] Sending payload to backoffice:', payload);
+      console.log(
+        '🔍 [BANK-ADAPTER] Calling Backoffice API:',
+        `${tokenRecord.targetDomain}/api/dashboard/deposit`,
+      );
+
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/dashboard/deposit`,
-        {
-          Id: depositDto.id || '',
-          Phone: depositDto.phone,
-          MoneyDeposit: depositDto.amount,
-          Currency: depositDto.currency,
-          BankName: depositDto.bankName,
-          DateDeposit: depositDto.dateDeposit,
-          TimeDeposit: depositDto.timeDeposit,
-          ActualDateTime: depositDto.actualDateTime,
-        },
+        payload,
         {
           headers: {
             Cookie: `token=${jwtToken}`,
@@ -569,6 +587,13 @@ export class GatewayService {
           },
         },
       );
+
+      console.log(
+        '✅ [BANK-ADAPTER] Backoffice response status:',
+        response.status,
+      );
+      console.log('✅ [BANK-ADAPTER] Backoffice response data:', response.data);
+
       return {
         success: true,
         data: response.data,
@@ -576,6 +601,11 @@ export class GatewayService {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
+      console.error('❌ [BANK-ADAPTER] deposit error:', error);
+      console.error('❌ [BANK-ADAPTER] Error response:', error.response?.data);
+      console.error('❌ [BANK-ADAPTER] Error status:', error.response?.status);
+      console.error('❌ [BANK-ADAPTER] Error message:', error.message);
+
       throw new HttpException(
         {
           error: 'Failed to deposit in backoffice',
