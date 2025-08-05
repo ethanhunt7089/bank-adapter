@@ -6,7 +6,13 @@ import { prisma } from '../lib/prisma';
 export class GatewayService {
   // Helper function to get JWT token from backoffice
   private async getJwtToken(targetDomain: string): Promise<string> {
+    console.log(
+      '🔍 [BANK-ADAPTER] getJwtToken called for domain:',
+      targetDomain,
+    );
+
     try {
+      console.log('🔍 [BANK-ADAPTER] Attempting login with admin credentials');
       const loginResponse = await axios.post(
         `${targetDomain}/api/auth/signin`,
         {
@@ -15,12 +21,23 @@ export class GatewayService {
         },
       );
 
+      console.log(
+        '🔍 [BANK-ADAPTER] Login response status:',
+        loginResponse.status,
+      );
+      console.log('🔍 [BANK-ADAPTER] Login response data:', loginResponse.data);
+
       if (loginResponse.data && loginResponse.data.data) {
+        console.log('✅ [BANK-ADAPTER] JWT token received successfully');
         return loginResponse.data.data;
       }
+
+      console.warn('⚠️ [BANK-ADAPTER] No JWT token in response');
       return '';
     } catch (error) {
-      console.error('Failed to get JWT token:', error);
+      console.error('❌ [BANK-ADAPTER] Failed to get JWT token:', error);
+      console.error('❌ [BANK-ADAPTER] Error response:', error.response?.data);
+      console.error('❌ [BANK-ADAPTER] Error status:', error.response?.status);
       return '';
     }
   }
@@ -39,8 +56,17 @@ export class GatewayService {
         );
       }
 
+      // เรียก JWT token
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
+      // ส่ง request พร้อม JWT token
       const response = await axios.get(
         `${tokenRecord.targetDomain}/api/member/list`,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+          },
+        },
       );
 
       return {
@@ -75,9 +101,19 @@ export class GatewayService {
         );
       }
 
+      // เรียก JWT token
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
+      // ส่ง request พร้อม JWT token
       const response = await axios.get(
         `${tokenRecord.targetDomain}/api/member/list`,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+          },
+        },
       );
+
       const members = response.data.data.members;
       const member = members.find((m) => m.id === id);
 
@@ -117,9 +153,19 @@ export class GatewayService {
         );
       }
 
+      // เรียก JWT token
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
+      // ส่ง request พร้อม JWT token
       const response = await axios.get(
         `${tokenRecord.targetDomain}/api/member/list`,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+          },
+        },
       );
+
       const members = response.data.data.members;
       const member = members.find((m) => m.username === phone);
 
@@ -159,9 +205,19 @@ export class GatewayService {
         );
       }
 
+      // เรียก JWT token
+      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+
+      // ส่ง request พร้อม JWT token
       const response = await axios.get(
         `${tokenRecord.targetDomain}/api/member/list`,
+        {
+          headers: {
+            Cookie: `token=${jwtToken}`,
+          },
+        },
       );
+
       const members = response.data.data.members;
       const member = members.find((m) => m.id === id);
 
@@ -194,12 +250,17 @@ export class GatewayService {
 
   // New methods for CRUD operations
   async createMember(createMemberDto: any) {
+    console.log('🔍 [BANK-ADAPTER] createMember called with:', createMemberDto);
+
     try {
       const tokenRecord = await prisma.token.findFirst({
         where: { isActive: true },
       });
 
+      console.log('🔍 [BANK-ADAPTER] Token record:', tokenRecord);
+
       if (!tokenRecord) {
+        console.error('❌ [BANK-ADAPTER] No active token found');
         throw new HttpException(
           'No active token found',
           HttpStatus.UNAUTHORIZED,
@@ -207,8 +268,20 @@ export class GatewayService {
       }
 
       // Get JWT token using helper function
+      console.log(
+        '🔍 [BANK-ADAPTER] Getting JWT token from:',
+        tokenRecord.targetDomain,
+      );
       const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      console.log(
+        '🔍 [BANK-ADAPTER] JWT token received:',
+        jwtToken ? 'Yes' : 'No',
+      );
 
+      console.log(
+        '🔍 [BANK-ADAPTER] Calling Backoffice API:',
+        `${tokenRecord.targetDomain}/api/member/create-member`,
+      );
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/create-member`,
         createMemberDto,
@@ -220,6 +293,8 @@ export class GatewayService {
         },
       );
 
+      console.log('✅ [BANK-ADAPTER] Backoffice response:', response.data);
+
       return {
         success: true,
         data: response.data,
@@ -227,6 +302,10 @@ export class GatewayService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
+      console.error('❌ [BANK-ADAPTER] createMember error:', error);
+      console.error('❌ [BANK-ADAPTER] Error response:', error.response?.data);
+      console.error('❌ [BANK-ADAPTER] Error status:', error.response?.status);
+
       throw new HttpException(
         {
           error: 'Failed to create member in backoffice',
@@ -551,58 +630,33 @@ export class GatewayService {
   }
 
   async getCustomerGroups() {
-    try {
-      const tokenRecord = await prisma.token.findFirst({
-        where: { isActive: true },
-      });
+    // ส่งข้อมูล mock สำหรับ customer groups
+    const customerGroups = [
+      { id: '1', picklistLabel: 'VIP' },
+      { id: '2', picklistLabel: 'Regular' },
+      { id: '3', picklistLabel: 'Premium' },
+    ];
 
-      if (!tokenRecord) {
-        throw new HttpException(
-          'No active token found',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-
-      // Get JWT token using helper function
-      const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
-
-      const response = await axios.get(
-        `${tokenRecord.targetDomain}/api/bank/bcel/get-bank`,
-        {
-          headers: {
-            Cookie: `token=${jwtToken}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-
-      return {
-        success: true,
-        data: response.data,
-        prefix: tokenRecord.prefix,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      throw new HttpException(
-        {
-          error: 'Failed to fetch customer groups from backoffice',
-          statusCode: 500,
-          details: error.message,
-          timestamp: new Date().toISOString(),
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      success: true,
+      data: customerGroups,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   // Verification APIs
   async checkAccount(checkAccountDto: any) {
+    console.log('🔍 [BANK-ADAPTER] checkAccount called with:', checkAccountDto);
+
     try {
       const tokenRecord = await prisma.token.findFirst({
         where: { isActive: true },
       });
 
+      console.log('🔍 [BANK-ADAPTER] Token record:', tokenRecord);
+
       if (!tokenRecord) {
+        console.error('❌ [BANK-ADAPTER] No active token found');
         throw new HttpException(
           'No active token found',
           HttpStatus.UNAUTHORIZED,
@@ -610,8 +664,20 @@ export class GatewayService {
       }
 
       // Get JWT token using helper function
+      console.log(
+        '🔍 [BANK-ADAPTER] Getting JWT token from:',
+        tokenRecord.targetDomain,
+      );
       const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      console.log(
+        '🔍 [BANK-ADAPTER] JWT token received:',
+        jwtToken ? 'Yes' : 'No',
+      );
 
+      console.log(
+        '🔍 [BANK-ADAPTER] Calling Backoffice API:',
+        `${tokenRecord.targetDomain}/api/member/check-account-name`,
+      );
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/check-account-name`,
         checkAccountDto,
@@ -623,13 +689,35 @@ export class GatewayService {
         },
       );
 
+      console.log('✅ [BANK-ADAPTER] Backoffice response:', response.data);
+
       return {
         success: true,
         data: response.data,
         prefix: tokenRecord.prefix,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ [BANK-ADAPTER] checkAccount error:', error);
+      console.error('❌ [BANK-ADAPTER] Error response:', error.response?.data);
+      console.error('❌ [BANK-ADAPTER] Error status:', error.response?.status);
+
+      // ตรวจสอบ error response จาก Backoffice
+      if (error.response?.status === 400) {
+        console.log('⚠️ [BANK-ADAPTER] Returning 400 error from Backoffice');
+        // ส่ง error message จาก Backoffice กลับไป
+        const tokenRecord = await prisma.token.findFirst({
+          where: { isActive: true },
+        });
+
+        return {
+          success: false,
+          data: error.response.data,
+          prefix: tokenRecord?.prefix,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
       throw new HttpException(
         {
           error: 'Failed to check account in backoffice',
@@ -675,7 +763,22 @@ export class GatewayService {
         prefix: tokenRecord.prefix,
         timestamp: new Date().toISOString(),
       };
-    } catch (error) {
+    } catch (error: any) {
+      // ตรวจสอบ error response จาก Backoffice
+      if (error.response?.status === 400) {
+        // ส่ง error message จาก Backoffice กลับไป
+        const tokenRecord = await prisma.token.findFirst({
+          where: { isActive: true },
+        });
+
+        return {
+          success: false,
+          data: error.response.data,
+          prefix: tokenRecord?.prefix,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
       throw new HttpException(
         {
           error: 'Failed to verify bank account in backoffice',
