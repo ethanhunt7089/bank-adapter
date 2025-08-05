@@ -446,10 +446,17 @@ export class GatewayService {
   }
 
   async removeCredit(id: string, removeCreditDto: any) {
+    console.log('🔍 [BANK-ADAPTER] removeCredit called with:', {
+      id,
+      removeCreditDto,
+    });
+
     try {
       const tokenRecord = await prisma.token.findFirst({
         where: { isActive: true },
       });
+      console.log('🔍 [BANK-ADAPTER] Token record:', tokenRecord);
+
       if (!tokenRecord) {
         throw new HttpException(
           'No active token found',
@@ -458,13 +465,25 @@ export class GatewayService {
       }
 
       const jwtToken = await this.getJwtToken(tokenRecord.targetDomain);
+      console.log(
+        '🔍 [BANK-ADAPTER] JWT token received:',
+        jwtToken ? 'Yes' : 'No',
+      );
+
+      const payload = {
+        id: id,
+        amount: removeCreditDto.amount,
+        remarks: removeCreditDto.remarks || 'Remove credit via Bank Adapter',
+      };
+      console.log('🔍 [BANK-ADAPTER] Sending payload to backoffice:', payload);
+      console.log(
+        '🔍 [BANK-ADAPTER] Calling Backoffice API:',
+        `${tokenRecord.targetDomain}/api/member/remove-credit-member`,
+      );
+
       const response = await axios.post(
         `${tokenRecord.targetDomain}/api/member/remove-credit-member`,
-        {
-          id: id,
-          amount: removeCreditDto.amount,
-          remarks: removeCreditDto.remarks || 'Remove credit via Bank Adapter',
-        },
+        payload,
         {
           headers: {
             Cookie: `token=${jwtToken}`,
@@ -472,6 +491,13 @@ export class GatewayService {
           },
         },
       );
+
+      console.log(
+        '✅ [BANK-ADAPTER] Backoffice response status:',
+        response.status,
+      );
+      console.log('✅ [BANK-ADAPTER] Backoffice response data:', response.data);
+
       return {
         success: true,
         data: response.data,
@@ -479,6 +505,10 @@ export class GatewayService {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
+      console.error('❌ [BANK-ADAPTER] removeCredit error:', error);
+      console.error('❌ [BANK-ADAPTER] Error response:', error.response?.data);
+      console.error('❌ [BANK-ADAPTER] Error status:', error.response?.status);
+
       throw new HttpException(
         {
           error: 'Failed to remove credit in backoffice',

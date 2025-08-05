@@ -98,6 +98,10 @@ export class GatewayController {
 
   @Post('/api/member/:id/remove-credit')
   async removeCredit(@Param('id') id: string, @Body() removeCreditDto: any) {
+    console.log('🔍 [BANK-ADAPTER] Controller received removeCredit request:', {
+      id,
+      removeCreditDto,
+    });
     return this.gatewayService.removeCredit(id, removeCreditDto);
   }
 
